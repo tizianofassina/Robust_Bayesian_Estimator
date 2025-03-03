@@ -1,32 +1,51 @@
 import numpy as np
 
 def repartition_function(x, theta):
-    mu = theta[0]
-    sigma = theta[1]
-    xi = theta[2]
-    arg = 1 + xi * (x - mu)/sigma
-    arg[arg <0] = 0
-    return np.exp(-(arg**(-1/xi)))
-
+    # theta must be p x 3
+    # x must be a number or a simple array
+    mu = theta[:, 0]
+    sigma = theta[:, 1]
+    xi = theta[:, 2]
+    if isinstance(x,np.ndarray):
+        arg = 1 + xi[:, np.newaxis] * (x[np.newaxis, : ] - mu[:, np.newaxis])/sigma[:, np.newaxis]
+        arg[arg < 0] = 0
+        arg = np.power(arg, -1/xi[:, np.newaxis], where  = arg > 0)
+    else:
+        arg = 1 + xi * (x - mu) / sigma
+        arg[arg <0] = 0
+        arg = np.power(arg, -1/xi,  where  = arg > 0)
+    return np.exp(-arg)
+    # output of size shape of theta x shape of x
 def density(x, theta):
-    mu = theta[0]
-    sigma = theta[1]
-    xi = theta[2]
-    arg = 1 + xi * (x - mu) / sigma
-    arg[arg < 0] = 0
-    return (1/sigma)*(arg**(-1/(xi-1))) * repartition_function(x, theta)
 
-#def single_evaluation(x, theta, data, p):
-    # consider theta a matrix with three columns(mu, sigma, theta)
-    # consider p a vector of the same length as the columns of theta
-    # consider data a vector
-    # the likelihood can be calculated with a sample np.prod(density(data, theta[i]))
-    # we should find a matricial way to express this calculation
+    mu = theta[:,0]
+    sigma = theta[:,1]
+    xi = theta[:,2]
+
+    if isinstance(x, np.ndarray):
+        arg = 1 + xi[:, np.newaxis] * (x[np.newaxis: 1] - mu[:, np.newaxis]) / sigma[:, np.newaxis]
+        arg[arg < 0] = 0
+        arg = np.power(arg, -1/xi[:, np.newaxis],  where  = arg > 0)
+        return (1/sigma[:, np.newaxis])*arg * repartition_function(x, theta)
+    else:
+        arg = 1 + xi * (x - mu) / sigma
+        arg[arg < 0] = 0
+        arg = np.power(arg, -1 / xi,  where  = arg > 0)
+    return (1/sigma)*arg * repartition_function(x, theta)
+
+def single_evaluation(x, theta, data, p):
+    # x is an array of size m
+    # theta is a matrix of size p x 3
+    # data is a vector of size n
+    # p is a vector of size p
+    likelihood = np.prod(density(data, theta) , axis = 1) # size p
+    like_p = likelihood*p # size p
+    numerator = repartition_function(x, theta) * like_p[:, np.newaxis] # size p x m
+    if isinstance(x, np.ndarray):
+        return np.sum(numerator, axis = 0) / np.sum(like_p)
+    else:
+        return np.sum(numerator) / np.sum(like_p)
 
 
-data = np.load("numpy_corsica.npy")
 
-# We have to compute the sup and the inf for the different values of x
-# The problem is to find a smart, precise and computational light way for doing it
-
-# then reverse and get the quantiles
+data = np.load("data_meuse_corsica/numpy_corsica.npy")
