@@ -1,7 +1,6 @@
 import numpy as np
 from utils import repartition_function, single_evaluation
 from scipy.optimize import minimize
-from scipy.optimize import minimize
 from functools import partial
 
 
@@ -90,12 +89,12 @@ def function_to_optimize(x, theta_p, data):
     return single_evaluation(x, theta, data, p)
 
 def constraint_f(theta_p):
-    matrix = np.zeros(n,n+1)
+    matrix = np.zeros((n, n + 1))
     for i in range(n+1):
         column = repartition_function(quantiles, theta_p[i*length_theta:(i+1)*length_theta])
 
         matrix[:,i] = column
-    return column - alphas
+    return np.dot(matrix, theta_p[-(n + 1):])  - alphas
 
 constraints = [
     {'type': 'eq', 'fun': lambda x: np.sum(x[-(n + 1):]) - 1},
@@ -116,15 +115,15 @@ def optimization(function, best_values):
 def sup_F(x, length_theta, sigma, number_candidates, quantiles, alphas, n, data, number_best ):
     candidate_values = possible_values(n, length_theta, sigma, number_candidates, quantiles, alphas)
     starting_points = best_values(x, data, candidate_values, length_theta, number_best, n )
-    objective_with_constants = partial(-1*function_to_optimize, constant1 = x,constant2 = data, constant3 = sup)
-    return -optimization(starting_points)
+    objective_with_constants = partial(-1*function_to_optimize, constant1 = x,constant2 = data)
+    return -optimization(objective_with_constants, starting_points)
 
 def inf_F(x, length_theta, sigma, number_candidates, quantiles, alphas, n, data, number_best ):
     candidate_values = possible_values(n, length_theta, sigma, number_candidates, quantiles, alphas)
     starting_points = best_values(x, data, candidate_values, length_theta, number_best, n )
     objective_with_constants = partial(function_to_optimize, constant1 = x,constant2 = data)
 
-    return optimization(starting_points)
+    return optimization(objective_with_constants, starting_points)
 
 
 
