@@ -131,6 +131,8 @@ if min_X[idx_mid] is not None:
 else:
     print("No valid minimum solution at the selected grid point.")
 
+
+
 if max_X[idx_mid] is not None:
     theta_opt_max = max_X[idx_mid][:3*m].reshape((m, 3))
     p_opt_max = max_X[idx_mid][3*m:]
