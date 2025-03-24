@@ -33,28 +33,29 @@ np.save( "data_meuse_corsica/numpy_corsica.npy", np.array(corsica_data))
 
 #The quantiles are saved with the columns : order of the quantile, quantile value, interval
 quantile_corsica = np.zeros((3,3))
-
-quantile_corsica[0,0]  = 0.05
-quantile_corsica[0,1] = 1250
-quantile_corsica[0,2] = 200
-quantile_corsica[1,0] = 0.5
-quantile_corsica[1,1] = 2000
-quantile_corsica[1,2] = 100
-quantile_corsica[2,0] = 0.75
-quantile_corsica[2,1] = 2100
-quantile_corsica[2,2] = 100
-
 quantile_meuse = np.zeros((3,3))
 
-quantile_meuse[0,0]  = 0.25
-quantile_meuse[0,1] = 75
-quantile_meuse[0,2] = 20
+
+quantile_meuse[0,0]  = 0.05
+quantile_meuse[0,1] = 1250
+quantile_meuse[0,2] = 200
 quantile_meuse[1,0] = 0.5
-quantile_meuse[1,1] = 100
-quantile_meuse[1,2] = 20
+quantile_meuse[1,1] = 2000
+quantile_meuse[1,2] = 100
 quantile_meuse[2,0] = 0.75
-quantile_meuse[2,1] = 150
-quantile_meuse[2,2] = 20
+quantile_meuse[2,1] = 2100
+quantile_meuse[2,2] = 100
+
+
+quantile_corsica[0,0]  = 0.25
+quantile_corsica[0,1] = 75
+quantile_corsica[0,2] = 20
+quantile_corsica[1,0] = 0.5
+quantile_corsica[1,1] = 100
+quantile_corsica[1,2] = 20
+quantile_corsica[2,0] = 0.75
+quantile_corsica[2,1] = 150
+quantile_corsica[2,2] = 20
 
 np.save( "data_meuse_corsica/numpy_corsica_quantile.npy",quantile_corsica)
 np.save( "data_meuse_corsica/numpy_meuse_quantile.npy",quantile_meuse)
