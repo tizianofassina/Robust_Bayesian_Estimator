@@ -9,7 +9,7 @@ def repartition_function(x, theta):
     # x must be a number or a simple array of size n
     x = np.atleast_1d(x)
     theta = np.atleast_2d(theta)
-    print(theta.shape)
+
     mu = theta[..., 0]
     sigma = theta[..., 1]
     xi = theta[..., 2]
@@ -47,6 +47,7 @@ def density(x, theta):
     #shape n x p
     output = (1 / sigma[np.newaxis,:]) * arg * repartition_function(x, theta)
     output[neg] = 0.
+
     return output
 
 
@@ -64,6 +65,7 @@ def single_evaluation(x, theta, data, p):
     like_p = like*p # size p
 
     numerator = repartition_function(x, theta) * like_p[np.newaxis, :] #size m x p
+
 
     if isinstance(x, np.ndarray):
         return np.sum(numerator, axis = 1) / np.sum(like_p)

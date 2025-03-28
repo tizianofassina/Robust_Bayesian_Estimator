@@ -12,6 +12,7 @@ with open("data_meuse_corsica/max-meuse.txt") as file:
             meuse_data.append(float(elements[0]))
 
 
+
 df = pd.read_csv("data_meuse_corsica/pluviometry-corsica.csv")
 
 with open("data_meuse_corsica/pluviometry-corsica.csv") as file:
@@ -28,7 +29,11 @@ with open("data_meuse_corsica/pluviometry-corsica.csv") as file:
 
 np.save( "data_meuse_corsica/numpy_meuse.npy", np.array(meuse_data))
 
+
+
+
 np.save( "data_meuse_corsica/numpy_corsica.npy", np.array(corsica_data))
+
 
 
 #The quantiles are saved with the columns : order of the quantile, quantile value, interval
