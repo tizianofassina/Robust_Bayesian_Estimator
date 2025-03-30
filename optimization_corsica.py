@@ -9,7 +9,6 @@ import pickle
 corsica_data = np.load("data_meuse_corsica/numpy_corsica.npy")
 corsica_data_quantile = np.load("data_meuse_corsica/numpy_corsica_quantile.npy")
 
-
 length_theta = 3
 
 
@@ -67,8 +66,9 @@ def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=4
         with open("possible_values_corsica.pkl", "wb") as f:
             pickle.dump(possible_values, f)
 
-    return f"Added {number_candidates} new possible candidates"
+    print(f"Added {number_candidates} new possible candidates")
 
+    return 0
 
 def best_values_for_sup(x, data, possible_values, number_best):
     values = []
@@ -80,7 +80,6 @@ def best_values_for_sup(x, data, possible_values, number_best):
         value = single_evaluation(x, theta, data, p)
 
         if not np.isnan(value) and value != 0:
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -92,7 +91,9 @@ def best_values_for_sup(x, data, possible_values, number_best):
     with open("best_initial_points_for_sup_corsica.pkl", "wb") as f:
         pickle.dump([valid_possible_values[i] for i in top_k_indices], f)
 
-    return f"Created the file with {number_best} initial points"
+    print(f"Created the file with {number_best} initial points")
+
+    return 0
 
 def best_values_for_inf(x, data, possible_values, number_best):
     values = []
@@ -105,7 +106,6 @@ def best_values_for_inf(x, data, possible_values, number_best):
 
         # Check that value is neither NaN nor inf (positive or negative)
         if not np.isnan(value) and not np.isinf(value):
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -117,7 +117,9 @@ def best_values_for_inf(x, data, possible_values, number_best):
     with open("best_initial_points_for_inf_corsica.pkl", "wb") as f:
         pickle.dump([valid_possible_values[i] for i in top_k_indices], f)
 
-    return f"Created the file with {number_best} initial points"
+    print(f"Created the file with {number_best} initial points")
+
+    return 0
 
 
 def function_for_maximization(theta_p, x , data):
@@ -173,17 +175,34 @@ def optimization(function, best_values, x, data):
 
 if __name__ == "__main__":
 
-    with open("best_initial_points_for_sup_corsica.pkl", "rb") as f:
-        bests_max = pickle.load(f)
+    x_s = np.arange(40, 400, step = 10.)
+
+    number_best = 100
 
 
-    print("Final supremum: ", optimization(function_for_maximization, bests_max, 10., corsica_data))
+    possible_values(n, length_theta,100000, quantiles, alphas)
 
-    with open("best_initial_points_for_inf_corsica.pkl", "rb") as f:
-            bests_min = pickle.load(f)
+    with open("possible_values_corsica.pkl", "rb") as f:
+        possible = pickle.load(f)
 
+    supremum = []
+    infimum = []
+    for x in x_s:
+        best_values_for_sup(x, corsica_data, possible, number_best)
+        with open("best_initial_points_for_sup_corsica.pkl", "rb") as f:
+            bests_max = pickle.load(f)
 
-    print("Final Infimum : ", optimization(function_for_minimization, bests_min, 10., corsica_data))
+        supremum.append(optimization(function_for_maximization, bests_max, x, corsica_data))
+
+        best_values_for_inf(x, corsica_data, possible, number_best)
+
+        with open("best_initial_points_for_inf_corsica.pkl", "rb") as f:
+                bests_min = pickle.load(f)
+        infimum.append(optimization(function_for_minimization, bests_min, x, corsica_data))
+
+    np.save(np.array(supremum), "Sup_corsica.npy")
+    np.save(np.array(infimum), "Inf_corscica.npy")
+
 
 
 

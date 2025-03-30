@@ -10,6 +10,7 @@ meuse_data = np.load("data_meuse_corsica/numpy_meuse.npy")
 meuse_data_quantile = np.load("data_meuse_corsica/numpy_meuse_quantile.npy")
 
 
+
 length_theta = 3
 
 
@@ -80,7 +81,6 @@ def best_values_for_sup(x, data, possible_values, number_best):
         value = single_evaluation(x, theta, data, p)
 
         if not np.isnan(value) and value != 0:
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -105,7 +105,6 @@ def best_values_for_inf(x, data, possible_values, number_best):
 
         # Check that value is neither NaN nor inf (positive or negative)
         if not np.isnan(value) and not np.isinf(value):
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -173,25 +172,32 @@ def optimization(function, best_values, x, data):
 
 if __name__ == "__main__":
 
-    with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
-        bests_max = pickle.load(f)
+    x_s = np.arange(450, 3300, step= 40.)
 
+    number_best = 100
 
-    print("Final supremum: ", optimization(function_for_maximization, bests_max, 10., meuse_data))
+    possible_values(n, length_theta, 100000, quantiles, alphas)
 
-    with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
+    with open("possible_values_meuse.pkl", "rb") as f:
+        possible = pickle.load(f)
+
+    supremum = []
+    infimum = []
+    for x in x_s:
+        best_values_for_sup(x, meuse_data, possible, number_best)
+        with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
+            bests_max = pickle.load(f)
+
+        supremum.append(optimization(function_for_maximization, bests_max, x, meuse_data))
+
+        best_values_for_inf(x, meuse_data, possible, number_best)
+
+        with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
             bests_min = pickle.load(f)
+        infimum.append(optimization(function_for_minimization, bests_min, x, meuse_data))
 
-
-    print("Final Infimum : ", optimization(function_for_minimization, bests_min, 10., meuse_data))
-
-
-
-
-
-
-
-
+    np.save(np.array(supremum), "Sup_meuse.npy")
+    np.save(np.array(infimum), "Inf_meuse.npy")
 
 
 
