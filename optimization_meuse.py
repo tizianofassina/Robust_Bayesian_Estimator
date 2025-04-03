@@ -23,18 +23,20 @@ quantiles = meuse_data_quantile[:,1]
 alphas =  meuse_data_quantile[:,0]
 
 
-def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=40.):
+def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=10.):
+    i = 0
     possible_values = []
     matrix = np.zeros((n + 1, n + 1))
     matrix[-1, :] = 1.
 
+    std = np.std(meuse_data)/2
+
     while len(possible_values) < number_candidates:
         theta = np.zeros(((n + 1), length_theta))
 
-        # std has to be high > = 40
         mu = np.random.randn(n + 1) * std + np.mean(meuse_data)
-        sigma = np.random.uniform(0, 1000, size=n + 1)
-        xi = np.random.uniform(-1000, 1000, size=n + 1)
+        sigma = np.random.lognormal(mean=np.log(std), sigma=0.5, size=n+1)
+        xi = np.random.uniform(-20, 20, size=n + 1)
 
         theta[:, 0] = mu
         theta[:, 1] = sigma
@@ -44,10 +46,10 @@ def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=4
 
         matrix[:-1, :] = repartition
 
+
         if np.abs(np.linalg.det(matrix)) > 1e-10:
 
             p = np.linalg.solve(matrix, np.append(alphas, 1))
-
             if all(p >= 0):
                 possible_values.append((theta, p))
 
@@ -160,7 +162,7 @@ def optimization(function, best_values, x, data, maximize=True):
     best_point = []
 
     options = {
-        'verbose': 0,
+        'verbose': 1,
         'gtol': 1e-8,
         'xtol': 1e-8,
         'maxiter': 250,
@@ -194,10 +196,9 @@ def optimization(function, best_values, x, data, maximize=True):
 if __name__ == "__main__":
 
     number_best = 100
-    possible_values(n, length_theta, 10000, quantiles, alphas)
 
 
-    x_s = np.arange(1., max(meuse_data) + 100, step=10.)
+    x_s = np.arange(300., 3400., step=40.)
 
     with open("possible_values_meuse.pkl", "rb") as f:
         possible = pickle.load(f)
@@ -235,8 +236,9 @@ if __name__ == "__main__":
 
                 break
             except:
-                possible_values(n, length_theta, 100000, quantiles, alphas)
+
                 print(f"⚠️ Error in optimization at x = {x}")
+                possible_values(n, length_theta, 100000, quantiles, alphas)
                 print("⚠️ Ricomputing possible values due to error in optimization")
                 with open("possible_values_meuse.pkl", "rb") as f:
                     possible = pickle.load(f)
