@@ -162,7 +162,7 @@ def optimization(function, best_values, x, data, maximize=True):
     best_point = []
 
     options = {
-        'verbose': 1,
+        'verbose': 0,
         'gtol': 1e-8,
         'xtol': 1e-8,
         'maxiter': 250,
@@ -171,18 +171,21 @@ def optimization(function, best_values, x, data, maximize=True):
 
     for element in best_values:
         initial_params = np.concatenate([element[0].flatten(), element[1]])
-        if np.any(likelihood(meuse_data, element[0]) != 0):
-            optim = minimize(
-                function,
-                x0=initial_params,
-                args=(x, data),
-                constraints=constraints,
-                method='trust-constr',
-                options = options
-            )
-            value = -optim.fun if maximize else optim.fun
-            result.append(value)
-            best_point.append(optim.x)
+        try :
+            if np.any(likelihood(meuse_data, element[0]) != 0):
+                optim = minimize(
+                    function,
+                    x0=initial_params,
+                    args=(x, data),
+                    constraints=constraints,
+                    method='trust-constr',
+                    options = options
+                )
+                value = -optim.fun if maximize else optim.fun
+                result.append(value)
+                best_point.append(optim.x)
+        except:
+            pass
 
     if not result:
         print("No valid result finded.")
@@ -213,36 +216,25 @@ if __name__ == "__main__":
 
     for x in x_s:
         i+=1
-        while True:
 
-            try:
-                if len(supremum) == 0 or supremum[-1] < 1.:
-                    best_values_for_sup(x, meuse_data, possible, number_best)
-                    with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
-                        bests_max = pickle.load(f)
+        if len(supremum) == 0 or supremum[-1] < 1.:
+            best_values_for_sup(x, meuse_data, possible, number_best)
+            with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
+                bests_max = pickle.load(f)
 
-                    result_max, arg_max = optimization(function_for_maximization, bests_max, x, meuse_data, maximize=True)
-                supremum.append(float(result_max))
-                argmax.append(arg_max)
+            result_max, arg_max = optimization(function_for_maximization, bests_max, x, meuse_data, maximize=True)
+        supremum.append(float(result_max))
+        argmax.append(arg_max)
 
-                best_values_for_inf(x, meuse_data, possible, number_best)
-                with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
-                    bests_min = pickle.load(f)
 
-                result_min, arg_min = optimization(function_for_minimization, bests_min, x, meuse_data, maximize=False)
-                infimum.append(float(result_min))
-                argmin.append(arg_min)
-                print(f"Progress {i / len(x_s) * 100:.2f}% - Point x: {x}, Sup: {result_max}, Inf: {result_min}")
+        best_values_for_inf(x, meuse_data, possible, number_best)
+        with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
+            bests_min = pickle.load(f)
 
-                break
-            except:
-
-                print(f"⚠️ Error in optimization at x = {x}")
-                possible_values(n, length_theta, 100000, quantiles, alphas)
-                print("⚠️ Ricomputing possible values due to error in optimization")
-                with open("possible_values_meuse.pkl", "rb") as f:
-                    possible = pickle.load(f)
-
+        result_min, arg_min = optimization(function_for_minimization, bests_min, x, meuse_data, maximize=False)
+        infimum.append(float(result_min))
+        argmin.append(arg_min)
+        print(f"Progress {i / len(x_s) * 100:.2f}% - Point x: {x}, Sup: {result_max}, Inf: {result_min}")
 
 
     print("🏁 Optimization completed.")
