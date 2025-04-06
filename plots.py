@@ -110,7 +110,7 @@ def plot_function(func, x_range, title, xlabel="", ylabel="", show=True, name=""
         plt.legend()
     if name != "":
         plt.tight_layout()
-        plt.savefig(name, dpi=300)
+        plt.savefig(name, dpi=50)
     if show:
         plt.tight_layout()
         plt.show()
