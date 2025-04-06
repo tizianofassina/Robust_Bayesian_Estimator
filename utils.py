@@ -14,23 +14,38 @@ def repartition_function(x, theta):
     sigma = theta[..., 1]
     xi = theta[..., 2]
 
-    arg = 1 + xi[np.newaxis,: ] * (x[:, np.newaxis] - mu[np.newaxis,:]) / sigma[np.newaxis,:]
+    epsilon = 1e-10
+    sigma_safe = np.clip(sigma, epsilon, None)
 
-    arg = np.clip(arg, 1e-10, None)
-    neg = (arg == 1e-10)
+    arg = 1 + xi[np.newaxis, :] * (x[:, np.newaxis] - mu[np.newaxis, :]) / sigma_safe[np.newaxis, :]
 
-    with np.errstate(divide='ignore', invalid='ignore'):
-        arg = np.power(arg, -1 / xi[np.newaxis, :], where=arg > 0)
-    exp = np.exp(-arg)
+    arg = np.clip(arg, epsilon, None)
+
+    with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+        power_exponent = -1 / xi[np.newaxis, :]
+        log_arg = np.where(arg > epsilon, np.power(arg, power_exponent), 0)
+
+    exp_term = np.exp(- log_arg)
+
     pos_xi = (xi > 0)[np.newaxis,:]
 
-    exp[neg & pos_xi] = 0.
-    exp[neg & ~pos_xi] = 1.
+    exp_term = np.where((arg == epsilon) & pos_xi, 0., exp_term)
+    exp_term = np.where((arg == epsilon) & (~pos_xi), 1., exp_term)
     #outputs of size of n x p.
 
-    return exp
+    return exp_term
 
 def density(x, theta):
+    """
+        Computes the density.
+
+        Parameters:
+            data: The input data of size n.
+            theta: The parameters used to compute the likelihood of size p x 3.
+
+        Returns:
+            The density of all combinations, size n x p.
+        """
     # theta must be p x 3
     # x must be a number or a simple array of size n
     x = np.atleast_1d(x)
@@ -52,8 +67,26 @@ def density(x, theta):
 
 
 def likelihood(data, theta):
+    """
+    Computes the likelihood by first computing the log likelihood
+    and then returning its exponentiated value.
 
-    return np.prod(density(data, theta), axis = 0)
+    Parameters:
+        data: The input data.
+        theta: The parameters used to compute the likelihood.
+
+    Returns:
+        The likelihood value computed as np.exp(log_like).
+    """
+    dens = density(data, theta)
+    if np.any(np.isnan(dens)):
+        print("Warning: density contains NaN values")
+    epsilon = 1e-10
+    log_dens = np.log(dens + epsilon)
+
+    log_like = np.sum(log_dens, axis=0)
+
+    return np.exp(log_like)
 
 def single_evaluation(x, theta, data, p):
     # x is an array of size m

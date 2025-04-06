@@ -10,6 +10,7 @@ meuse_data = np.load("data_meuse_corsica/numpy_meuse.npy")
 meuse_data_quantile = np.load("data_meuse_corsica/numpy_meuse_quantile.npy")
 
 
+
 length_theta = 3
 
 
@@ -22,18 +23,20 @@ quantiles = meuse_data_quantile[:,1]
 alphas =  meuse_data_quantile[:,0]
 
 
-def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=40.):
+def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=10.):
+    i = 0
     possible_values = []
     matrix = np.zeros((n + 1, n + 1))
     matrix[-1, :] = 1.
 
+    std = np.std(meuse_data)/2
+
     while len(possible_values) < number_candidates:
         theta = np.zeros(((n + 1), length_theta))
 
-        # std has to be high > = 40
         mu = np.random.randn(n + 1) * std + np.mean(meuse_data)
-        sigma = np.random.uniform(0, 1000, size=n + 1)
-        xi = np.random.uniform(-1000, 1000, size=n + 1)
+        sigma = np.random.lognormal(mean=np.log(std), sigma=0.5, size=n+1)
+        xi = np.random.uniform(-20, 20, size=n + 1)
 
         theta[:, 0] = mu
         theta[:, 1] = sigma
@@ -43,10 +46,10 @@ def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=4
 
         matrix[:-1, :] = repartition
 
+
         if np.abs(np.linalg.det(matrix)) > 1e-10:
 
             p = np.linalg.solve(matrix, np.append(alphas, 1))
-
             if all(p >= 0):
                 possible_values.append((theta, p))
 
@@ -67,7 +70,9 @@ def possible_values(n, length_theta, number_candidates, quantiles, alphas, std=4
         with open("possible_values_meuse.pkl", "wb") as f:
             pickle.dump(possible_values, f)
 
-    return print(f"Added {number_candidates} new possible candidates")
+    print(f"Added {number_candidates} new possible candidates")
+
+    return 0
 
 
 def best_values_for_sup(x, data, possible_values, number_best):
@@ -80,7 +85,6 @@ def best_values_for_sup(x, data, possible_values, number_best):
         value = single_evaluation(x, theta, data, p)
 
         if not np.isnan(value) and value != 0:
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -91,8 +95,9 @@ def best_values_for_sup(x, data, possible_values, number_best):
 
     with open("best_initial_points_for_sup_meuse.pkl", "wb") as f:
         pickle.dump([valid_possible_values[i] for i in top_k_indices], f)
+    print(f"Created the file with {number_best} initial points")
 
-    return print(f"Created the file with {number_best} initial points")
+    return 0
 
 def best_values_for_inf(x, data, possible_values, number_best):
     values = []
@@ -105,7 +110,6 @@ def best_values_for_inf(x, data, possible_values, number_best):
 
         # Check that value is neither NaN nor inf (positive or negative)
         if not np.isnan(value) and not np.isinf(value):
-            print(value)
             values.append(value)
             valid_possible_values.append(element)
 
@@ -116,8 +120,9 @@ def best_values_for_inf(x, data, possible_values, number_best):
 
     with open("best_initial_points_for_inf_meuse.pkl", "wb") as f:
         pickle.dump([valid_possible_values[i] for i in top_k_indices], f)
+    print(f"Created the file with {number_best} initial points")
 
-    return print(f"Created the file with {number_best} initial points")
+    return 0
 
 
 def function_for_maximization(theta_p, x , data):
@@ -152,47 +157,95 @@ constraints = [
 
 
 
-def optimization(function, best_values, x, data):
-
+def optimization(function, best_values, x, data, maximize=True):
     result = []
+    best_point = []
+
+    options = {
+        'verbose': 0,
+        'gtol': 1e-8,
+        'xtol': 1e-8,
+        'maxiter': 250,
+        'initial_tr_radius': 1.0,
+    }
+
     for element in best_values:
         initial_params = np.concatenate([element[0].flatten(), element[1]])
-        if np.any(likelihood(meuse_data, element[0]) != 0) :
+        try :
+            if np.any(likelihood(meuse_data, element[0]) != 0):
+                optim = minimize(
+                    function,
+                    x0=initial_params,
+                    args=(x, data),
+                    constraints=constraints,
+                    method='trust-constr',
+                    options = options
+                )
+                value = -optim.fun if maximize else optim.fun
+                result.append(value)
+                best_point.append(optim.x)
+        except:
+            pass
 
-            result.append( - minimize(
-                function,
-                x0=initial_params,
-                args=(x, data),
-                constraints=constraints,
-                method='trust-constr'
-            ).fun)
+    if not result:
+        print("No valid result finded.")
+        return None, None
 
+    i = np.argmax(result) if maximize else np.argmin(result)
 
-    return max(result)
+    return result[i], best_point[i]
 
 
 if __name__ == "__main__":
 
-    with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
-        bests_max = pickle.load(f)
+    number_best = 100
 
 
-    print("Final supremum: ", optimization(function_for_maximization, bests_max, 10., meuse_data))
+    x_s = np.arange(300., 3400., step=40.)
 
-    with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
+    with open("possible_values_meuse.pkl", "rb") as f:
+        possible = pickle.load(f)
+
+
+    infimum = []
+    argmax = []
+    supremum = []
+    argmin = []
+
+    i = 0
+
+    for x in x_s:
+        i+=1
+
+        if len(supremum) == 0 or supremum[-1] < 1.:
+            best_values_for_sup(x, meuse_data, possible, number_best)
+            with open("best_initial_points_for_sup_meuse.pkl", "rb") as f:
+                bests_max = pickle.load(f)
+
+            result_max, arg_max = optimization(function_for_maximization, bests_max, x, meuse_data, maximize=True)
+        supremum.append(float(result_max))
+        argmax.append(arg_max)
+
+
+        best_values_for_inf(x, meuse_data, possible, number_best)
+        with open("best_initial_points_for_inf_meuse.pkl", "rb") as f:
             bests_min = pickle.load(f)
 
-
-    print("Final Infimum : ", optimization(function_for_minimization, bests_min, 10., meuse_data))
-
-
-
-
+        result_min, arg_min = optimization(function_for_minimization, bests_min, x, meuse_data, maximize=False)
+        infimum.append(float(result_min))
+        argmin.append(arg_min)
+        print(f"Progress {i / len(x_s) * 100:.2f}% - Point x: {x}, Sup: {result_max}, Inf: {result_min}")
 
 
+    print("🏁 Optimization completed.")
+    print(supremum)
+    print(infimum)
 
-
-
+    np.save("Sup_meuse.npy", np.array(supremum))
+    np.save("Inf_meuse.npy", np.array(infimum))
+    np.save("Argmax_meuse.npy", np.array(argmax))
+    np.save("Argmin_meuse.npy", np.array(argmin))
+    np.save("x_meuse.npy", np.array(x_s))
 
 
 
